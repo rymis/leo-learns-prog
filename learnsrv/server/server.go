@@ -195,6 +195,8 @@ func errResponse(w http.ResponseWriter, err error) {
 }
 
 func handleReq[T interface{}, R interface{}](w http.ResponseWriter, req *http.Request, ctx *Context, f func(ctx *Context, a *T) (R, error)) {
+    w.Header().Add("content-type", "application/json")
+
     var args T
     decoder := json.NewDecoder(req.Body)
     err := decoder.Decode(&args)
