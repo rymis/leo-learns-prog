@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/rymis/leo-learns-prog/learnsrv/rcs"
@@ -27,9 +28,8 @@ func New(root, static string) (*Server, error) {
     res.Root = root
     res.StaticRoot = static
     res.Mux = http.NewServeMux()
-    res.Mux.Handle("/s/", http.StripPrefix("/s/", http.FileServer(http.Dir(static))))
+    res.Mux.Handle("/", http.FileServer(http.Dir(static)))
     res.setupAPIHandlers()
-    res.Mux.Handle("/", http.RedirectHandler("/s/index.html", http.StatusTemporaryRedirect))
 
     return res, nil
 }
@@ -46,6 +46,9 @@ func (srv *Server) setupAPIHandlers() {
     })
     srv.Mux.HandleFunc("/api/versions", func (w http.ResponseWriter, r *http.Request) {
         handleReq(w, r, srv.parseContext(r), srv.postVersions)
+    })
+    srv.Mux.HandleFunc("/api/list", func (w http.ResponseWriter, r *http.Request) {
+        handleReq(w, r, srv.parseContext(r), srv.postList)
     })
 }
 
@@ -134,6 +137,28 @@ func (srv *Server) postVersions(ctx *Context, name *string) (versionsResult, err
     res.Versions, err = r.Versions()
 
     return res, err
+}
+
+func (srv *Server) postList(ctx *Context, mask *string) ([]string, error) {
+    d, err := srv.getUserDir(ctx)
+    if err != nil {
+        return nil, err
+    }
+
+    files := rcs.ListFiles(d)
+    if mask != nil {
+        f := make([]string, 0, len(files))
+        for _, fnm := range files {
+            bnm := filepath.Base(fnm)
+            if ok, err := path.Match(*mask, bnm); ok && err == nil {
+                f = append(f, fnm)
+            }
+        }
+
+        files = f
+    }
+
+    return files, nil
 }
 
 func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

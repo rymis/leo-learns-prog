@@ -1,5 +1,4 @@
 // Simple revision control system implementation.
-
 package rcs
 
 import (
@@ -23,10 +22,15 @@ type RCSFile struct {
     Path string
 }
 
+// Information about a file version
 type VersionInfo struct {
+    // Unique version
     Version string    `json:"version"`
+    // Time this version was created in JavaScript format (Milliseconds from 1970-01-01)
     Time    float64   `json:"time"`
+    // Commit message
     Comment string    `json:"comment"`
+    // Parent commit version (aka previous version)
     Parent  string    `json:"parent"`
 }
 
@@ -102,6 +106,7 @@ func (rcs *RCSFile) save(r *rcsFile) error {
     return os.Rename(tmpName, rcs.Path)
 }
 
+// Get the last version of file.
 func (rcs *RCSFile) Get() (string, error) {
     globalLock.Lock()
     defer globalLock.Unlock()
@@ -114,6 +119,7 @@ func (rcs *RCSFile) Get() (string, error) {
     return r.Current.Data, nil
 }
 
+// Create new version of file with  specified comment.
 func (rcs *RCSFile) Put(data string, comment string) (string, error) {
     // This version goes to history and we create the new one
     hist := rcsHist{}
@@ -141,6 +147,7 @@ func (rcs *RCSFile) Put(data string, comment string) (string, error) {
     return hist.Version, rcs.save(r)
 }
 
+// Get all known versions of the file
 func (rcs* RCSFile) Versions() ([]VersionInfo, error) {
     globalLock.Lock()
     r, err := rcs.load()
@@ -162,6 +169,7 @@ func (rcs* RCSFile) Versions() ([]VersionInfo, error) {
     return res, nil
 }
 
+// Get file content at specific version
 func (rcs* RCSFile) GetVersion(ver string) (string, error) {
     globalLock.Lock()
     r, err := rcs.load()
@@ -229,5 +237,25 @@ func (h rcsHist) ToInfo() (res VersionInfo) {
     res.Time = h.Time
     res.Parent = h.Parent
     return
+}
+
+// ListFiles returns a list of files in directory with lock.
+func ListFiles(path string) []string {
+    globalLock.Lock()
+    defer globalLock.Unlock()
+
+    entries, err := os.ReadDir(path)
+    if err != nil {
+        return nil
+    }
+
+    res := make([]string, 0, len(entries))
+    for _, entry := range entries {
+        if !entry.IsDir() {
+            res = append(res, entry.Name())
+        }
+    }
+
+    return res
 }
 
