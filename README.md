@@ -70,3 +70,13 @@ Response:
 ```
 [ "file1", "file2", ... ]
 ```
+
+How to run
+----------
+Go part is easy to build with Go installed:
+```
+> cd learnsrv
+> go build
+> ./learnsrv -h
+> ./learnsrv
+```
